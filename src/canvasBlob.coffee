@@ -40,7 +40,7 @@ canvasBlob = (imgEle) ->
     if not imgEle? and imgEle.tagName != 'IMG'
         console.log('TypeError: Need a image object')
         return false
-    if (hasBlob() or !!BlobBuilder) and hasArrayBuffer()
+    if !!canvasPrototype and (hasBlob() or !!BlobBuilder) and hasArrayBuffer()
 
         width = imgEle.width
         height = imgEle.height
@@ -51,8 +51,45 @@ canvasBlob = (imgEle) ->
         context = canvas.getContext('2d')
         context.drawImage(imgEle, 0, 0)
 
-        this.renderImage = (w=width, h=height) ->
-            return canvas
+        this.imageName = ->
+            try
+                return /[^\/]+\.[^\/]+$/.exec(imgEle.src)[0]
+            catch e
+                console.log 'invalid name'
+                return 'error'
+
+        this.renderImage = (targetW=width, targetH=height, alpha = 0.25, beta = 4) ->
+            # return a img element. w, h is the target width and height, respectively
+            # alpha and beta are coefficients that prevent the img from being distorted
+            # w / width * H/h will be compared with alpha and beta.
+            # alpha: it clips the img vertically, increasing with clipping threshold.
+            # beta: it clips the img horizontally, decreasing with clipping threshold.
+            renderedImg = document.createElement('img')
+            renderedImg.src = canvas.toDataURL()
+            clip = (img, w, h) -> img.style = "clip: rect(0px, #{w}px, #{h}px, 0px);"
+
+            if targetH > height # handle the most frequent situation first
+                ratio = targetW / width * height / targetH
+                if ratio < alpha
+                    if targetW > width
+                        renderedImg.width = targetW
+                        clip renderedImg, targetW, targetH
+
+                    else
+                        clip renderedImg, width, targetH
+
+                else if ratio < 1 then renderedImg.height = targetH
+                else if ratio < beta then renderedImg.width = targetW
+                else
+                    renderedImg.height = targetH
+                    clip renderedImg, targetW, targetH
+            else
+                if width > targetW
+                    if targetW / width * height / targetH < beta then renderedImg.width = targetW
+                    else clip renderedImg, targetW, height
+
+            return renderedImg
+
 
         this.toBlob = ->
             dataUrl = canvas.toDataURL()
@@ -77,7 +114,10 @@ canvasBlob = (imgEle) ->
                     bb = new BlobBuilder()
                     bb.append (arrayBuffer)
                     bb.getBlob(mimetype)
+    else
+        console.log('no Blob or Canvas support! Change to a better browser?')
+        return false
 
-        this
+    this
 
 argument[0].canvasBlob = canvasBlob
