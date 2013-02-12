@@ -3,8 +3,8 @@
 #| Share Pics to Google +
 #|
 #| 3. google+ api
-#| this part will need several xhrs and corresponding objects
-#|
+#| call method: a = new GpAPI(); a.setCallbacks(callbacks);
+#| a.init(); a.postImage(options)
 #|
 ###############################################
 
@@ -19,16 +19,18 @@ SPAR_34_SINGLE =  [249, 18, 1, 0]
 IMGOBJ_MULTI = "27847199"
 IMGOBJ_SINGLE = "27639957"
 IMGOBJ_PIC_ARRAY_SIZE = 14
+BATCH_SIZE = 2 # controls the concurrent number of uploading
 
-# first open session
-# url : /_/resumable?authuser=0 |1|2
-# Form Data needs filename, size
-# respones include upload url, upload id
+
 openSession = (index, batchid)->
-    fileName = @.imgList[index].fileName
-    fileSize = @.imgList[index].fileSize
-    album = @.album
-    # album = { 'albumName':'String', 'albumID': 'Int', 'childCount': 'Int' }
+    fileName = @imgList[index].imageName()
+    fileBlob = @imgList[index].toBlob()
+    fileSize = fileBlob.size
+    album = @album
+    callback = @callbacks['open']
+    batchid = batchid.toString()
+    @currentUpload++
+
     sessionRequestFiled = (obj) ->
         # just return the array of object. couple list comprehension and omnipresent expression
         for name, content of obj
@@ -51,7 +53,7 @@ openSession = (index, batchid)->
             "addtime"                   :   new Date().getTime().toString()
             "batchid"                   :   batchid #new Date().getTime().toString() # in multiphoto upload, this will be a pertinent handling. batch id should be the same
             "album_id"                  :   album['albumID']
-            "album_abs_position"        :   album['childCount'].toString()
+            "album_abs_position"        :   (album['childCount']+index).toString()
             "client"                    :   "es-add-standalone-album"
     else
         a =
@@ -60,12 +62,12 @@ openSession = (index, batchid)->
             "disable_asbe_notification" :   "true"
             "streamid"                  :   "updates"
             "use_upload_size_pref"      :   "true"
-            "album_abs_position"        :   index
+            "album_abs_position"        :   index.toString()
     requestData =
         "protocolVersion" : "0.8"
         "fields"          : fields.concat sessionRequestFiled a
 
-    ajax {
+    ajax
         method  : "POST"
         url     : baseURL + "/_/upload/photos/resumable?authuser=" + authuser
         headers :
@@ -75,39 +77,46 @@ openSession = (index, batchid)->
             obj = JSON.parse resp["responseText"]
             try
                 uploadURL = obj.sessionStatus.externalFieldTransfers[0].putInfo.url
-                @.uploadImage uploadURL
+                console.log 'openSession success'
+                if callback?
+                    try
+                        callback()
+                    catch e
+                        console.log 'callback error'
+
+                @uploadImage fileBlob, uploadURL
             catch e
                 console.log 'openSession error'
-        }
 
-#upload photo
-# url : upload url from the result of open session
-# query data: refer to upload url
-# data : blob
-# response :
-#   customerSpecificInfo: album id, photo Id, width,height,
-#    url (photo), photoPageUrl, albumPageUrl, timeStamp
 
-uploadImage = (uploadURL) ->
-    ajax {
+uploadImage = (fileBlob, uploadURL) ->
+    callback = @callbacks['upload']
+    ajax
         method : "POST"
         url    : uploadURL
-        data   : @.blob if @.blob?
+        data   : fileBlob
         onload : (resp) ->
             obj = JSON.parse resp
             if obj["errorMessage"]?
                 console.log obj["errorMessage"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["requestRejectedInfo"]["reasonDescription"]
             else
-                # event hanlder should go here
-                @.customerInfo.push obj["sessionStatus"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["completionInfo"]["customerSpecificInfo"]
-    }
+                console.log 'upload success'
+                if callback?
+                    try
+                        callback()
+                    catch e
+                        console.log 'callback error'
 
-#post image
-#form data needs customerSpecificInfo
-postImage = ->
+                @customerInfo.push obj["sessionStatus"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["completionInfo"]["customerSpecificInfo"]
+            @currentUpload--
+
+
+# postOption contains post info, which should be collected by other methods
+postImage = (postOption)->
+    callback = @callbacks['post']
     newNullArray = (length) -> for i in [0...length] then null
 
-    imgObjPics = (isAlbum, isMulti) => for info in @.customerInfo
+    imgObjPics = (isAlbum, isMulti) => for info in @customerInfo
         #this should point to GplusAPI object. this method is called in imgObj Creating
         title = info["title"]
         url = info["url"]
@@ -154,7 +163,7 @@ postImage = ->
         image[13] = []
         image
 
-    imgs = for info in @.customerInfo
+    imgs = for info in @customerInfo
         title = info["title"]
         url = info["url"]
         width = info["width"]
@@ -176,24 +185,26 @@ postImage = ->
         image[47][1] = [albumID, photoID, photoPageUrl] # buffer, to be formated
 
     spar = newNullArray sparRequestLength
-    spar[0] = "comment" #HDmark
-    spar[1] = "oz:#{userID}.#{new Date().getTime().toString(16)}.0" #HDmark
-    spar[3] = if @.album? then @.album['albumID'] else @.customerInfo[0]['albumid']
+    spar[0] = postOption['comment']
+    spar[1] = "oz:#{postOption['userID']}.#{new Date().getTime().toString(16)}.0"
+    spar[3] = if @album? then @album['albumID'] else @customerInfo[0]['albumid']
     spar[9] = true
-    #spar[10] = for m in mention then [null, m]
+    spar[10] = for m in postOption['mention'] then [null, m]
     spar[14] = spar[36] = []
     spar[11] = spar[16] = false
-    spar[19] = self.userID
-    #spar[27] = disableComments
-    #spar[28] = lockPost
+    spar[19] = postOption['userID']
+    spar[27] = postOption['disableComment']
+    spar[28] = postOption['lockPost']
     spar[34] = newNullArray spar34Length
-    #spar[37] = circle
-    spar[44] = "!A0JoSBi6oOwwzERUO9imjc2DBAIAAAB-UgAAABwqAP1nVYvUCx8059loatzv7aZeAiPps50y5LimHfezr9OWN2cq90I9k1zEJAJ1quTRw8e7mvDUSEWnKqXZciNy4nDBMuViQEzNgguv8yB3G-hf18gkl-Thr-abucgItO2180dQzVV1gEiWxHWUwC3fCQQMTNEWNKdYSzB4F4paHu0KMYa3hKHpVn6JyE724tgMLVc87cVjGx2e7mqpZKATQSagfITx3QrZpA1q2H3x3dFM-ggERNkKcl9ArcHKHAG92Njty6orBkGSMIeMVlpx1jtGANOk2LDKgwsu4i5LGDAjrAjeubthS6ZMvigJ2ZQ0-oNsmoGk2tquBYGP8FRX"
+    spar[37] = [ [], null]
+    for c in postOption['circle'] then spar[37][0].push [null, c]
+    for m in postOption['mention'] then spar[37][0].push [null, null, m]
+    spar[44] = "!A0JoSBi6oOwwzERUO9imjc2DBAIAAAB-UgAAABwq1gEi"
 
-    if @.album? and @.album['albumName']?
-        albumUrl = "https://plus.google.com/photos/" + UserID + "/albums/" + @.album['albumID']
+    if @album? and @album['albumName']?
+        albumUrl = "https://plus.google.com/photos/" + UserID + "/albums/" + @album['albumID']
         albumInfo = newNullArray albumInfoLength
-        albumInfo[3] = @.album['albumName']
+        albumInfo[3] = @album['albumName']
         albumInfo[9] = []
         albumInfo[24] = [null, albumUrl, null, "text/html", "document"]
         albumInfo[41] = []
@@ -219,7 +230,7 @@ postImage = ->
         tempArray[4] = userID
         tempArray[5] = @album['albumID']
         tempArray[8] = 0
-        tempArray[10] = "photos/" + UserID + "/albums/" + @.album['albumID']
+        tempArray[10] = "photos/" + UserID + "/albums/" + @album['albumID']
         imgObj[IMGOBJ_MULTI] = tempArray
 
     else
@@ -256,17 +267,54 @@ postImage = ->
         headers :
             "Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"
         data    : 'f.req=' + (encodeURIComponent JSON.stringify spar )+ "&at=#{sessionID}" #HDmark
+
+        onload  : ->
+            if callback?
+                try
+                    callback()
+                catch e
+                    console.log 'callback error'
     }
 
+init = ->
+    batchid = +new Date()
+    for i in @imgList.length
+        while @currentUpload > BATCH_SIZE
+            true
+        @openSession i, batchid
+    uploadedAll = ->
+        if @imgList.length == @customerInfo.length
+            clearInterval wait
+            callbacks['ready']() if callbacks['ready']?
+    interval = ( @imgList[0].toBlob().size * @imgList.length ) >> 8 # estimate uploading time
+    wait = setInterval uploadedAll, interval
+
+#callbacks is an object containing callback funcitons. all callbacks are default to null
+#'open', 'uplaod': executed after each image request is made
+# 'ready': all images uploaded, 'post': executedwhen the post is shared
+setCallbacks = (callbacks = {}) ->
+    cbList = ['open', 'upload', 'ready', 'post']
+    if typeof callbacks is "object"
+        for cb in cbList then @callbacks[cb] = callbacks[cb]
 
 #
-GpAPI = (canvasBlob, album = null) ->
-    unless canvasBlob?
+GpAPI = ( imgList, album = null) ->
+    unless imgList?
         console.log 'no Pics!'
         return false
-    @.fileName = canvasBlob.imageName()
-    @.fileDate = canvasBlob.toBlob()
-    @.fileSize = fileDate.size
-    @.customerInfo
+    @imgList = imgList
+    @album = album # album = { 'albumName':'String', 'albumID': 'Int', 'childCount': 'Int' }
+    @customerInfo = []
+    @currentUpload = 0 #increase in openSession and decrease in onload of upload
+    @setCallbacks()
+
     return @
 
+# buffered prototype method!
+GpAPI.prototype.openSession = openSession
+GpAPI.prototype.uploadImage = uploadImage
+GpAPI.prototype.postImage = postImage
+GpAPI.prototype.setCallbacks = setCallbacks
+GpAPI.prototype.init = init
+
+arguments[0].GpAPI = GpAPI
