@@ -82,14 +82,14 @@ ajax = ( options ) ->
                     when "onload"
                         if xhr.readyState is 4 and ( 200 <= xhr.status < 300 or xhr.status is 304 )
                             try
-                                options[prog](xhr.response, xhr)
+                                options[prog](xhr)
                             catch e
                                 console.log "#{prog} handler error"
                                 return false
                     when 'onerror'
                         if xhr.readyState is 4 and xhr.status >= 400
                             try
-                                options[prog](xhr.response, xhr)
+                                options[prog](xhr)
                             catch e
                                 console.log "#{prog} handler error"
                                 return false
@@ -99,7 +99,7 @@ ajax = ( options ) ->
                 if options['spec']?
                     if ''+xhr.status in options['spec']
                         try
-                            options['spec'](xhr.response)
+                            options['spec'](xhr)
                         catch e
                             console.log 'spec error'
                             return false
@@ -109,7 +109,7 @@ context.ajax = ajax
 
 # unit test
 
-
+###
 test =
     url     : 'http://www.baidu.com' #no relative path
     #method  : 'GET'
@@ -122,3 +122,4 @@ test =
     data    :  'take it boy'
 
 ajax test
+###

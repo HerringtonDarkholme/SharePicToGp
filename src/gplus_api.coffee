@@ -8,6 +8,8 @@
 #|
 ###############################################
 
+context = arguments[0] || window
+
 baseURL = "https://plus.google.com"
 authuser = 0  # for future switch
 sparRequestLength = 45 # new protocol will add new info
@@ -98,7 +100,7 @@ uploadImage = (fileBlob, uploadURL) ->
         url    : uploadURL
         data   : fileBlob
         onload : (resp) ->
-            obj = JSON.parse resp
+            obj = JSON.parse resp['responseText']
             if obj["errorMessage"]?
                 console.log obj["errorMessage"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["requestRejectedInfo"]["reasonDescription"]
             else
@@ -265,20 +267,20 @@ postImage = (postOption)->
 
     spam = if @album? then 24 else 20
     reqid = +new Date()% 10000000
-    ajax {
+    ajax
         method  : 'POST'
         url     : "#{baseURL}/_/sharebox/post/?spam=#{spam}&rt=j&_reqid=#{reqid}"
         headers :
             "Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"
         data    : 'f.req=' + (encodeURIComponent JSON.stringify spar )+ "&at=#{sessionID}" #HDmark
 
-        onload  : ->
+        onload  : (resp)->
             if callback?
                 try
-                    callback()
+                    callback(resp)
                 catch e
                     console.log 'callback error'
-    }
+
 
 init = ->
     batchid = +new Date()
@@ -321,4 +323,4 @@ GpAPI.prototype.postImage = postImage
 GpAPI.prototype.setCallbacks = setCallbacks
 GpAPI.prototype.init = init
 
-arguments[0].GpAPI = GpAPI
+context.GpAPI = GpAPI
