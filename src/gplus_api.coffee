@@ -27,6 +27,7 @@ openSession = (index, batchid)->
     fileBlob = @imgList[index].toBlob()
     fileSize = fileBlob.size
     album = @album
+    uploadImage = @uploadImage
     callback = @callbacks['open']
     batchid = batchid.toString()
     @currentUpload++
@@ -84,13 +85,14 @@ openSession = (index, batchid)->
                     catch e
                         console.log 'callback error'
 
-                @uploadImage fileBlob, uploadURL
+                uploadImage fileBlob, uploadURL
             catch e
                 console.log 'openSession error'
 
 
 uploadImage = (fileBlob, uploadURL) ->
     callback = @callbacks['upload']
+    self = @
     ajax
         method : "POST"
         url    : uploadURL
@@ -107,13 +109,15 @@ uploadImage = (fileBlob, uploadURL) ->
                     catch e
                         console.log 'callback error'
 
-                @customerInfo.push obj["sessionStatus"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["completionInfo"]["customerSpecificInfo"]
-            @currentUpload--
+                self.customerInfo.push obj["sessionStatus"]["additionalInfo"]["uploader_service.GoogleRupioAdditionalInfo"]["completionInfo"]["customerSpecificInfo"]
+            self.currentUpload--
 
 
 # postOption contains post info, which should be collected by other methods
 postImage = (postOption)->
     callback = @callbacks['post']
+    userID = postOption['userID']
+    sessionID = postOption['sessionID']
     newNullArray = (length) -> for i in [0...length] then null
 
     imgObjPics = (isAlbum, isMulti) => for info in @customerInfo
@@ -186,13 +190,13 @@ postImage = (postOption)->
 
     spar = newNullArray sparRequestLength
     spar[0] = postOption['comment']
-    spar[1] = "oz:#{postOption['userID']}.#{new Date().getTime().toString(16)}.0"
+    spar[1] = "oz:#{userID}.#{new Date().getTime().toString(16)}.0"
     spar[3] = if @album? then @album['albumID'] else @customerInfo[0]['albumid']
     spar[9] = true
     spar[10] = for m in postOption['mention'] then [null, m]
     spar[14] = spar[36] = []
     spar[11] = spar[16] = false
-    spar[19] = postOption['userID']
+    spar[19] = userID
     spar[27] = postOption['disableComment']
     spar[28] = postOption['lockPost']
     spar[34] = newNullArray spar34Length
@@ -202,7 +206,7 @@ postImage = (postOption)->
     spar[44] = "!A0JoSBi6oOwwzERUO9imjc2DBAIAAAB-UgAAABwq1gEi"
 
     if @album? and @album['albumName']?
-        albumUrl = "https://plus.google.com/photos/" + UserID + "/albums/" + @album['albumID']
+        albumUrl = "https://plus.google.com/photos/" + userID + "/albums/" + @album['albumID']
         albumInfo = newNullArray albumInfoLength
         albumInfo[3] = @album['albumName']
         albumInfo[9] = []
@@ -230,7 +234,7 @@ postImage = (postOption)->
         tempArray[4] = userID
         tempArray[5] = @album['albumID']
         tempArray[8] = 0
-        tempArray[10] = "photos/" + UserID + "/albums/" + @album['albumID']
+        tempArray[10] = "photos/" + userID + "/albums/" + @album['albumID']
         imgObj[IMGOBJ_MULTI] = tempArray
 
     else

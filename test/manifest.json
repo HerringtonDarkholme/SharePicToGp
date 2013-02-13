@@ -1,0 +1,20 @@
+{
+    "manifest_version" : 2,
+
+    "name" : "test",
+
+    "description" : "unit test for one-click share",
+    "version" : "1.0",
+
+    "permissions" : [
+        "\u003Call_urls\u003E",
+        "contextMenus",
+        "storage",
+        "tabs"
+    ],
+
+    "background" : {
+        "scripts" : [ "contextMenu.js" ]
+    }
+
+}
