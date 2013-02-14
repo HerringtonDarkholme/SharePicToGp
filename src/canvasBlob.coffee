@@ -45,28 +45,50 @@ canvasBlob = (imgEle) ->
 
         width = imgEle.width
         height = imgEle.height
-        that = this
-        canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        context = canvas.getContext('2d')
-        context.drawImage(imgEle, 0, 0)
 
-        this.imageName = ->
+        @imageName = ->
             try
                 return /[^\/]+\.[^\/]+$/.exec(imgEle.src)[0]
             catch e
                 console.log 'invalid name'
                 return 'error'
 
-        this.renderImage = (targetW=width, targetH=height, alpha = 0.25, beta = 4) ->
+        @getByteString = ->
+            try
+                canvas = document.createElement('canvas')
+                context = canvas.getContext('2d')
+                context.width = width
+                context.height = height
+                context.drawImage(imgEle, 0, 0)
+                dataUrl = canvas.toDataURL()
+                #check if the dataUrl is encoded
+                if dataUrl.split(',')[0].indexOf('base64') != -1
+                    byteString = atob( dataUrl.split(',')[1] )
+                else
+                    byteString = atob( decodesURIComponent(dataUrl).split(',')[1] )
+
+            catch e
+                byteString
+                ajax
+                    method : "GET"
+                    url    : imgEle.src
+                    async  : false
+                    before : (xhr) ->
+                        xhr.overrideMimeType('text/plain; charset=x-user-defined')
+                        true
+                    onload : (resp)->
+                        byteString = resp['responseText']
+                    onerror : (resp) ->
+                        throw 'cannot get image!'
+                byteString
+
+        @renderImage = (targetW=width, targetH=height, alpha = 0.25, beta = 4) ->
             # return a img element. w, h is the target width and height, respectively
             # alpha and beta are coefficients that prevent the img from being distorted
             # w / width * H/h will be compared with alpha and beta.
             # alpha: it clips the img vertically, increasing with clipping threshold.
             # beta: it clips the img horizontally, decreasing with clipping threshold.
-            renderedImg = document.createElement('img')
-            renderedImg.src = canvas.toDataURL()
+            renderedImg = imgEle.cloneNode()
             clip = (img, w, h) -> img.style = "clip: rect(0px, #{w}px, #{h}px, 0px);"
 
             if targetH > height # handle the most frequent situation first
@@ -92,29 +114,25 @@ canvasBlob = (imgEle) ->
             return renderedImg
 
 
-        this.toBlob = ->
-            dataUrl = canvas.toDataURL()
-            if !!w.atob
-                #check if the dataUrl is encoded
-                if dataUrl.split(',')[0].indexOf('base64') != -1
-                    byteString = atob( dataUrl.split(',')[1] )
-                else
-                    byteString = atob( decodesURIComponent(dataUrl).split(',')[1] )
-                length = byteString.length
-                arrayBuffer = new ArrayBuffer(length)
-                intArray = new Uint8Array(arrayBuffer)
-                for i in [0..length]
-                    intArray[i] = byteString.charCodeAt(i)
+        @toBlob = ->
+            byteString = @getByteString()
+            length = byteString.length
+            arrayBuffer = new ArrayBuffer(length)
+            intArray = new Uint8Array(arrayBuffer)
+            for i in [0..length]
+                intArray[i] = byteString.charCodeAt(i)
 
-                #separate the mimetype and pass it to Blob
-                mimetype = /image\/\w+/.exec(dataUrl)[0]
-                if hasBlob()
-                    blobData = if hasArrayBufferViweSupport() then intArray else arrayBuffer
-                    new Blob( [blobData], {type: mimetype} )
-                else
-                    bb = new BlobBuilder()
-                    bb.append (arrayBuffer)
-                    bb.getBlob(mimetype)
+            #separate the mimetype and pass it to Blob
+            mimetype = ( /\.(\w)+/.exec @imageName() )[1]
+            if hasBlob()
+                blobData = if hasArrayBufferViweSupport() then intArray else arrayBuffer
+                new Blob( [blobData], {type: mimetype} )
+            else
+                bb = new BlobBuilder()
+                bb.append (arrayBuffer)
+                bb.getBlob(mimetype)
+
+
     else
         console.log('no Blob or Canvas support! Change to a better browser?')
         return false

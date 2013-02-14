@@ -164,7 +164,7 @@
     return JSON.parse(text);
   };
 
-  init = function() {
+  init = function(callback) {
     var self;
     self = this;
     return ajax({
@@ -173,41 +173,57 @@
       async: false,
       onload: function(resp) {
         var responseText;
-        responseText = resp['responseText'];
-        console.log(resp.status);
-        self.userID = (/plus\.google\.com\/(\d+)/.exec(responseText))[1];
-        return self.sessionID = (/AObGSA.*:\d+/.exec(responseText))[0];
+        try {
+          responseText = resp['responseText'];
+          console.log(resp.status);
+          self.userID = (/plus\.google\.com\/(\d+)/.exec(responseText))[1];
+          self.sessionID = (/AObGSA.*:\d+/.exec(responseText))[0];
+          if (callback != null) {
+            return callback(self);
+          }
+        } catch (e) {
+          console.log(e);
+          return console.log('Error! try signing in?');
+        }
       }
     });
   };
 
-  getCircle = function() {
+  getCircle = function(callback) {
     var self;
     self = this;
     return ajax({
       method: "GET",
       url: socialGraphURL,
       onload: function(resp) {
-        var c, circles, _i, _len, _ref, _results;
+        var c, circles, _i, _len, _ref;
         try {
           circles = parseGdata(resp['responseText']);
           _ref = circles[0][1];
-          _results = [];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             c = _ref[_i];
-            _results.push(self.circleInfo[c[1][0]] = c[0]);
+            self.circleInfo[c[1][0]] = c[0][0];
           }
-          return _results;
+          if (callback != null) {
+            return callback(self);
+          }
         } catch (e) {
-          console.log(e);
+          self.init(self.getCircle);
           return console.log('Error in loading circles');
         }
       }
     });
   };
 
-  getAlbum = function() {
+  getAlbum = function(callback, retry) {
     var makeAlbumInfo, self;
+    if (retry == null) {
+      retry = 1;
+    }
+    if (retry < 0) {
+      console.log('Unable to Info!');
+      return false;
+    }
     makeAlbumInfo = function(list) {
       if (Object.prototype.toString.call(someVar) === '[object Array]') {
         try {
@@ -219,12 +235,10 @@
             albumsUrl: list[8]
           };
         } catch (e) {
-          console.log('malformed array');
-          return false;
+          return console.log('malformed array');
         }
       } else {
-        console.log('non Array input');
-        return false;
+        return console.log('non Array input');
       }
     };
     self = this;
@@ -236,15 +250,21 @@
         method: "GET",
         url: albumsURL + self.userID,
         onload: function(resp) {
-          var a, albums, createdAlbum, _i, _len, _results;
-          albums = (parseGdata(resp['responseText']))[0];
-          createdAlbum = albums[2];
-          _results = [];
-          for (_i = 0, _len = createdAlbum.length; _i < _len; _i++) {
-            a = createdAlbum[_i];
-            _results.push(self.albumInfo.push(makeAlbumInfo(a)));
+          var a, albums, createdAlbum, _i, _len;
+          try {
+            albums = (parseGdata(resp['responseText']))[0];
+            createdAlbum = albums[2];
+            for (_i = 0, _len = createdAlbum.length; _i < _len; _i++) {
+              a = createdAlbum[_i];
+              self.albumInfo.push(makeAlbumInfo(a));
+            }
+            if (callback != null) {
+              return callback(self);
+            }
+          } catch (e) {
+            self.init(self.getAlbum);
+            return console.log('error in launch');
           }
-          return _results;
         }
       });
     }
@@ -323,30 +343,33 @@
 
 
   clickHandler = function(info, tab) {
-    var currentUser, storedTabs, storedUsers, user, _ref;
+    var storedTabs, storedUsers, user;
     storedUsers = JSON.parse(localStorage['GpicUsers']);
     storedTabs = JSON.parse(localStorage['GpicTabs']);
     if (storedUsers.length === 0) {
       user = new userInfo();
-      user.init();
-      user.getCircle();
-      storedUsers.push(user.dumps());
-      localStorage['GpicUsers'] = JSON.stringify(storedUsers);
-    }
-    currentUser = storedUsers[0];
-    if (_ref = tab.id, __indexOf.call(storedTabs, _ref) < 0) {
-      chrome.tabs.executeScript(tab.id, {
-        file: 'test.js'
-      }, function() {
-        return chrome.tabs.sendMessage(tab.id, {
-          status: 'injection success',
-          todo: 'execute',
-          target: info.srcUrl,
-          user: currentUser
+      return user.init(function() {
+        return user.getCircle(function() {
+          var currentUser, _ref;
+          storedUsers.push(user.dumps());
+          localStorage['GpicUsers'] = JSON.stringify(storedUsers);
+          currentUser = storedUsers[0];
+          if (_ref = tab.id, __indexOf.call(storedTabs, _ref) < 0) {
+            chrome.tabs.executeScript(tab.id, {
+              file: 'test.js'
+            }, function() {
+              return chrome.tabs.sendMessage(tab.id, {
+                status: 'injection success',
+                todo: 'execute',
+                target: info.srcUrl,
+                user: currentUser
+              });
+            });
+            storedTabs.push(tab.id);
+            return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
+          }
         });
       });
-      storedTabs.push(tab.id);
-      return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
     } else {
       return chrome.tabs.sendMessage(tab.id, {
         todo: 'execute',

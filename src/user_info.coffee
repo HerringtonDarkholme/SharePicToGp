@@ -20,7 +20,7 @@ parseGdata = (text) ->
     while /,\]/.test text then text = text.replace /,\]/g , ',null]'
     JSON.parse text
 
-init = ->
+init = (callback)->
     self = @
     ajax
         method : "GET"
@@ -32,10 +32,11 @@ init = ->
                 console.log resp.status
                 self.userID = (/plus\.google\.com\/(\d+)/.exec responseText)[1]
                 self.sessionID = (/AObGSA.*:\d+/.exec responseText)[0]
+                callback(self) if callback?
             catch e
                 console.log e
                 console.log 'Error! try signing in?'
-getCircle = ->
+getCircle = (callback)->
     self = @
     ajax
         method : "GET"
@@ -44,12 +45,16 @@ getCircle = ->
             try
                 circles = parseGdata resp['responseText']
                 for c in circles[0][1]
-                    self.circleInfo[ c[1][0] ] = c[0] #c[1][0]:circle name, c[0] : circle id
+                    self.circleInfo[ c[1][0] ] = c[0][0] #c[1][0]:circle name, c[0] : circle id
+                callback(self) if callback?
             catch e
-                console.log e
+                self.init(self.getCircle)
                 console.log 'Error in loading circles'
 
-getAlbum = ->
+getAlbum = (callback, retry= 1)->
+    if retry < 0
+        console.log  'Unable to Info!'
+        return false
     makeAlbumInfo = (list) ->
         if Object.prototype.toString.call( someVar ) is '[object Array]'
             try
@@ -60,10 +65,8 @@ getAlbum = ->
                     albumsUrl    : list[8]
             catch e
                 console.log  'malformed array'
-                return false
         else
             console.log  'non Array input'
-            false
 
 
     self = @
@@ -75,10 +78,16 @@ getAlbum = ->
             method : "GET"
             url    : albumsURL + self.userID
             onload : (resp) ->
-                albums = (parseGdata resp['responseText'])[0]
-                # builtin = albums[1] do not store builtin album info
-                createdAlbum = albums[2]
-                for a in createdAlbum then self.albumInfo.push makeAlbumInfo a
+                try
+                    albums = (parseGdata resp['responseText'])[0]
+                    # builtin = albums[1] do not store builtin album info
+                    createdAlbum = albums[2]
+                    for a in createdAlbum then self.albumInfo.push makeAlbumInfo a
+                    callback(self) if callback?
+                catch e
+                    self.init(self.getAlbum)
+                    console.log 'error in launch'
+
 
 dumps = ->
     userID : @userID

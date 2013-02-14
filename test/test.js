@@ -168,7 +168,7 @@
   };
 
   canvasBlob = function(imgEle) {
-    var canvas, height, that, width;
+    var height, width;
     if (!(imgEle != null) && imgEle.tagName !== 'IMG') {
       console.log('TypeError: Need a image object');
       return false;
@@ -176,18 +176,47 @@
     if (!!canvasPrototype && (hasBlob() || !!BlobBuilder) && hasArrayBuffer()) {
       width = imgEle.width;
       height = imgEle.height;
-      that = this;
-      canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      context = canvas.getContext('2d');
-      context.drawImage(imgEle, 0, 0);
       this.imageName = function() {
         try {
           return /[^\/]+\.[^\/]+$/.exec(imgEle.src)[0];
         } catch (e) {
           console.log('invalid name');
           return 'error';
+        }
+      };
+      this.getByteString = function() {
+        var byteString, canvas, dataUrl;
+        try {
+          canvas = document.createElement('canvas');
+          context = canvas.getContext('2d');
+          context.width = width;
+          context.height = height;
+          context.drawImage(imgEle, 0, 0);
+          dataUrl = canvas.toDataURL();
+          if (dataUrl.split(',')[0].indexOf('base64') !== -1) {
+            return byteString = atob(dataUrl.split(',')[1]);
+          } else {
+            return byteString = atob(decodesURIComponent(dataUrl).split(',')[1]);
+          }
+        } catch (e) {
+          byteString;
+
+          ajax({
+            method: "GET",
+            url: imgEle.src,
+            async: false,
+            before: function(xhr) {
+              xhr.overrideMimeType('text/plain; charset=x-user-defined');
+              return true;
+            },
+            onload: function(resp) {
+              return byteString = resp['responseText'];
+            },
+            onerror: function(resp) {
+              throw 'cannot get image!';
+            }
+          });
+          return byteString;
         }
       };
       this.renderImage = function(targetW, targetH, alpha, beta) {
@@ -204,8 +233,7 @@
         if (beta == null) {
           beta = 4;
         }
-        renderedImg = document.createElement('img');
-        renderedImg.src = canvas.toDataURL();
+        renderedImg = imgEle.cloneNode();
         clip = function(img, w, h) {
           return img.style = "clip: rect(0px, " + w + "px, " + h + "px, 0px);";
         };
@@ -238,31 +266,24 @@
         return renderedImg;
       };
       this.toBlob = function() {
-        var arrayBuffer, bb, blobData, byteString, dataUrl, i, intArray, length, mimetype, _i;
-        dataUrl = canvas.toDataURL();
-        if (!!w.atob) {
-          if (dataUrl.split(',')[0].indexOf('base64') !== -1) {
-            byteString = atob(dataUrl.split(',')[1]);
-          } else {
-            byteString = atob(decodesURIComponent(dataUrl).split(',')[1]);
-          }
-          length = byteString.length;
-          arrayBuffer = new ArrayBuffer(length);
-          intArray = new Uint8Array(arrayBuffer);
-          for (i = _i = 0; 0 <= length ? _i <= length : _i >= length; i = 0 <= length ? ++_i : --_i) {
-            intArray[i] = byteString.charCodeAt(i);
-          }
-          mimetype = /image\/\w+/.exec(dataUrl)[0];
-          if (hasBlob()) {
-            blobData = hasArrayBufferViweSupport() ? intArray : arrayBuffer;
-            return new Blob([blobData], {
-              type: mimetype
-            });
-          } else {
-            bb = new BlobBuilder();
-            bb.append(arrayBuffer);
-            return bb.getBlob(mimetype);
-          }
+        var arrayBuffer, bb, blobData, byteString, i, intArray, length, mimetype, _i;
+        byteString = this.getByteString();
+        length = byteString.length;
+        arrayBuffer = new ArrayBuffer(length);
+        intArray = new Uint8Array(arrayBuffer);
+        for (i = _i = 0; 0 <= length ? _i <= length : _i >= length; i = 0 <= length ? ++_i : --_i) {
+          intArray[i] = byteString.charCodeAt(i);
+        }
+        mimetype = (/\.(\w)+/.exec(this.imageName()))[1];
+        if (hasBlob()) {
+          blobData = hasArrayBufferViweSupport() ? intArray : arrayBuffer;
+          return new Blob([blobData], {
+            type: mimetype
+          });
+        } else {
+          bb = new BlobBuilder();
+          bb.append(arrayBuffer);
+          return bb.getBlob(mimetype);
         }
       };
     } else {
