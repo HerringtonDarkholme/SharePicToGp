@@ -10,6 +10,7 @@
 
 
 # Canvas extension
+context = arguments[0] || window
 w = window
 canvasPrototype = w.HTMLCanvasElement and w.HTMLCanvasElement.prototype
 
@@ -120,4 +121,4 @@ canvasBlob = (imgEle) ->
 
     this
 
-argument[0].canvasBlob = canvasBlob
+context.canvasBlob = canvasBlob

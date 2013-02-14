@@ -29,7 +29,7 @@ openSession = (index, batchid)->
     fileBlob = @imgList[index].toBlob()
     fileSize = fileBlob.size
     album = @album
-    uploadImage = @uploadImage
+    self = @
     callback = @callbacks['open']
     batchid = batchid.toString()
     @currentUpload++
@@ -68,7 +68,8 @@ openSession = (index, batchid)->
             "album_abs_position"        :   index.toString()
     requestData =
         "protocolVersion" : "0.8"
-        "fields"          : fields.concat sessionRequestFiled a
+        "createSessionRequest" :
+            "fields"          : fields.concat sessionRequestFiled a
 
     ajax
         method  : "POST"
@@ -76,6 +77,7 @@ openSession = (index, batchid)->
         headers :
             "Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"
             "x-guploader-client-info" : "mechanism=scotty xhr resumable; clientVersion=42171334"
+        data    : JSON.stringify requestData
         onload  : (resp) ->
             obj = JSON.parse resp["responseText"]
             try
@@ -87,8 +89,9 @@ openSession = (index, batchid)->
                     catch e
                         console.log 'callback error'
 
-                uploadImage fileBlob, uploadURL
+                self.uploadImage fileBlob, uploadURL
             catch e
+                console.log e
                 console.log 'openSession error'
 
 
@@ -116,6 +119,17 @@ uploadImage = (fileBlob, uploadURL) ->
 
 
 # postOption contains post info, which should be collected by other methods
+###
+format
+postOption =
+    comment : '' //String
+    mention : ['123456789'] //array of UserID string
+    disableComment : false //boolean
+    lockPost : false //boolean
+    circle : ['72cf18790d1b46b5'] // array of circleID string
+    userID : '123456789' //string
+    sessionID : 'AObSGbLaHBlAhbLAH:123456789' //session string
+###
 postImage = (postOption)->
     callback = @callbacks['post']
     userID = postOption['userID']
@@ -183,12 +197,13 @@ postImage = (postOption)->
         image[5] = [null, url, width, height] #original size
         image[9] = []
         image[21] = title
-        image[24] = [null, photoPageUrl, null, "image/jpeg", "image"] #consider give a mimetpye
+        image[24] = [null, photoPageUrl, null, "image/" + title.split('.')[1], "image"]
         image[41] = []
         image[41][0] = [null, url, width, height] # thumbnail size
         image[47] = []
         image[47][0] = [null, "picasa", "http://google.com/profiles/media/provider", ""]
         image[47][1] = [albumID, photoID, photoPageUrl] # buffer, to be formated
+        image
 
     spar = newNullArray sparRequestLength
     spar[0] = postOption['comment']
@@ -212,6 +227,7 @@ postImage = (postOption)->
         albumInfo = newNullArray albumInfoLength
         albumInfo[3] = @album['albumName']
         albumInfo[9] = []
+        albumInfo[21] = @album['albumSummary'] if @album['albumSummary']?
         albumInfo[24] = [null, albumUrl, null, "text/html", "document"]
         albumInfo[41] = []
         albumInfo[47] = []
@@ -247,7 +263,6 @@ postImage = (postOption)->
         spar[6] = JSON.stringify imgs
         #spar[12] = false
         spar[29] = true
-
         if imgs.length > 1
             spar[34][0] = SPAR_34_MULTI
 
@@ -261,9 +276,9 @@ postImage = (postOption)->
         else
             spar[34][0] = SPAR_34_SINGLE
             imgObj = {}
-            imgObj[IMGOBJ_SINGLE] = imgObjPics[0]
+            imgObj[IMGOBJ_SINGLE] = (imgObjPics())[0]
 
-    spar[34][spar34Length -1] = imgObj
+    spar[34][spar34Length-1] = imgObj
 
     spam = if @album? then 24 else 20
     reqid = +new Date()% 10000000
@@ -284,15 +299,17 @@ postImage = (postOption)->
 
 init = ->
     batchid = +new Date()
-    for i in @imgList.length
+    for i in [0...@imgList.length]
         while @currentUpload > BATCH_SIZE
             true
+        console.log 'openSession!'
         @openSession i, batchid
-    uploadedAll = ->
+    uploadedAll = =>
         if @imgList.length == @customerInfo.length
             clearInterval wait
-            callbacks['ready']() if callbacks['ready']?
+            @callbacks['ready']() if @callbacks['ready']?
     interval = ( @imgList[0].toBlob().size * @imgList.length ) >> 8 # estimate uploading time
+
     wait = setInterval uploadedAll, interval
 
 #callbacks is an object containing callback funcitons. all callbacks are default to null
@@ -309,9 +326,10 @@ GpAPI = ( imgList, album = null) ->
         console.log 'no Pics!'
         return false
     @imgList = imgList
-    @album = album # album = { 'albumName':'String', 'albumID': 'Int', 'childCount': 'Int' }
+    @album = album # album = { 'albumName':'String', 'albumID': 'Int', 'albumSummary': 'string','childCount': 'Int' }
     @customerInfo = []
     @currentUpload = 0 #increase in openSession and decrease in onload of upload
+    @callbacks = {}
     @setCallbacks()
 
     return @

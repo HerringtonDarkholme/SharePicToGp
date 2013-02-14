@@ -49,7 +49,7 @@ ajax = ( options ) ->
     url = options['url']
     data = if options['data']? then options['data'] else null
     method = if options['method']? then options['method'] else (unless data? then 'GET' else 'POST')
-    async = if options['async']? then options['async'] else false
+    async = if options['async']? then options['async'] else true
 
     xhr = xhr_compatible()
     xhr.open( method, url, async)
@@ -74,35 +74,36 @@ ajax = ( options ) ->
 
     for prog in ['onload', 'onerror', 'onprogress']
         if options[prog]?
-            xhr[prog] = options[prog]
+            xhr[prog] = (->
+                active = prog
+                (progressEvent) ->
+                    options[active] xhr, progressEvent)() #use IIFE to evaluate prog
 
-        else
-            xhr.onreadystatechanges = ->
-                switch prog
-                    when "onload"
-                        if xhr.readyState is 4 and ( 200 <= xhr.status < 300 or xhr.status is 304 )
-                            try
-                                options[prog](xhr)
-                            catch e
-                                console.log "#{prog} handler error"
-                                return false
-                    when 'onerror'
-                        if xhr.readyState is 4 and xhr.status >= 400
-                            try
-                                options[prog](xhr)
-                            catch e
-                                console.log "#{prog} handler error"
-                                return false
-                    when 'onprogress'
-                        console.log 'progress cannot be handled'
-                        return false
-                if options['spec']?
-                    if ''+xhr.status in options['spec']
-                        try
-                            options['spec'](xhr)
-                        catch e
-                            console.log 'spec error'
-                            return false
+    xhr.onreadystatechanges = ->
+
+        if xhr.readyState is 4 and ( 200 <= xhr.status < 300 or xhr.status is 304 )
+            try
+                options['onload'](xhr) if options['onload']?
+            catch e
+                console.log "onload handler error"
+                return false
+
+        if xhr.readyState is 4 and xhr.status >= 400
+            try
+                options['error'](xhr) if options['error']?
+            catch e
+                console.log "error handler error"
+                return false
+
+        console.log 'progress cannot be mocked by xhr'
+
+        if options['spec']?
+            if ''+xhr.status in options['spec']
+                try
+                    options['spec'](xhr)
+                catch e
+                    console.log 'spec error'
+                    return false
     xhr.send(data)
 
 context.ajax = ajax

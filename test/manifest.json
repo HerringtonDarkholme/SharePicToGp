@@ -14,7 +14,9 @@
     ],
 
     "background" : {
-        "scripts" : [ "contextMenu.js" ]
+        "scripts" : [ "bg.js" ],
+        "persistent" : false
     }
+
 
 }
