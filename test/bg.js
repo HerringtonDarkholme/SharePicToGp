@@ -7,9 +7,9 @@
 
   w = window;
 
-  addListener = w.addEventListener != null ? w.addEventListener : w.attachEvent;
+  addListener = w.addEventListener != null ? 'addEventListener' : 'attachEvent';
 
-  rmvListener = w.removeEventListener != null ? w.removeEventListener : w.detachEvent;
+  rmvListener = w.removeEventListener != null ? 'removeEventListener' : 'detachEvent';
 
   xhr_compatible = function() {
     if (w.XMLHttpRequest != null) {
@@ -343,7 +343,7 @@
 
 
   clickHandler = function(info, tab) {
-    var storedTabs, storedUsers, user;
+    var currentUser, storedTabs, storedUsers, user, _ref;
     storedUsers = JSON.parse(localStorage['GpicUsers']);
     storedTabs = JSON.parse(localStorage['GpicTabs']);
     if (storedUsers.length === 0) {
@@ -367,15 +367,39 @@
             });
             storedTabs.push(tab.id);
             return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
+          } else {
+            currentUser = storedUsers[0];
+            return chrome.tabs.sendMessage(tab.id, {
+              todo: 'execute',
+              target: info.srcUrl,
+              user: currentUser
+            });
           }
         });
       });
     } else {
-      return chrome.tabs.sendMessage(tab.id, {
-        todo: 'execute',
-        target: info.srcUrl,
-        user: currentUser
-      });
+      currentUser = storedUsers[0];
+      if (_ref = tab.id, __indexOf.call(storedTabs, _ref) < 0) {
+        chrome.tabs.executeScript(tab.id, {
+          file: 'test.js'
+        }, function() {
+          return chrome.tabs.sendMessage(tab.id, {
+            status: 'injection success',
+            todo: 'execute',
+            target: info.srcUrl,
+            user: currentUser
+          });
+        });
+        storedTabs.push(tab.id);
+        return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
+      } else {
+        currentUser = storedUsers[0];
+        return chrome.tabs.sendMessage(tab.id, {
+          todo: 'execute',
+          target: info.srcUrl,
+          user: currentUser
+        });
+      }
     }
   };
 

@@ -7,9 +7,9 @@
 
   w = window;
 
-  addListener = w.addEventListener != null ? w.addEventListener : w.attachEvent;
+  addListener = w.addEventListener != null ? 'addEventListener' : 'attachEvent';
 
-  rmvListener = w.removeEventListener != null ? w.removeEventListener : w.detachEvent;
+  rmvListener = w.removeEventListener != null ? 'removeEventListener' : 'detachEvent';
 
   xhr_compatible = function() {
     if (w.XMLHttpRequest != null) {
@@ -168,17 +168,20 @@
   };
 
   canvasBlob = function(imgEle) {
-    var height, width;
+    var copy, height, width;
     if (!(imgEle != null) && imgEle.tagName !== 'IMG') {
       console.log('TypeError: Need a image object');
       return false;
     }
     if (!!canvasPrototype && (hasBlob() || !!BlobBuilder) && hasArrayBuffer()) {
-      width = imgEle.width;
-      height = imgEle.height;
+      copy = imgEle.cloneNode();
+      copy.removeAttribute('width');
+      copy.removeAttribute('height');
+      width = copy.width;
+      height = copy.height;
       this.imageName = function() {
         try {
-          return /[^\/]+\.[^\/]+$/.exec(imgEle.src)[0];
+          return /[^\/]+\.[^\/]+$/.exec(copy.src)[0];
         } catch (e) {
           console.log('invalid name');
           return 'error';
@@ -189,9 +192,9 @@
         try {
           canvas = document.createElement('canvas');
           context = canvas.getContext('2d');
-          context.width = width;
-          context.height = height;
-          context.drawImage(imgEle, 0, 0);
+          canvas.width = width;
+          canvas.height = height;
+          context.drawImage(copy, 0, 0);
           dataUrl = canvas.toDataURL();
           if (dataUrl.split(',')[0].indexOf('base64') !== -1) {
             return byteString = atob(dataUrl.split(',')[1]);
@@ -203,7 +206,7 @@
 
           ajax({
             method: "GET",
-            url: imgEle.src,
+            url: copy.src,
             async: false,
             before: function(xhr) {
               xhr.overrideMimeType('text/plain; charset=x-user-defined');
@@ -233,7 +236,7 @@
         if (beta == null) {
           beta = 4;
         }
-        renderedImg = imgEle.cloneNode();
+        renderedImg = copy.cloneNode();
         clip = function(img, w, h) {
           return img.style = "clip: rect(0px, " + w + "px, " + h + "px, 0px);";
         };
@@ -718,9 +721,8 @@
   context.GpAPI = GpAPI;
 
   messageHandler = function(message, sender, sendResponse) {
-    var cand, candidates, cvsB, filename, postOption, target, targetUrl, upload, _i, _len;
+    var cand, candidates, cvsB, filename, graphicalInterface, postOption, target, targetUrl, upload, _i, _len;
     if (message['todo'] === 'execute') {
-      console.log(message);
       targetUrl = message['target'];
       console.log(targetUrl);
       filename = /[^\/]+\.[^\/]+$/.exec(targetUrl);
@@ -739,7 +741,6 @@
         }
       }
       cvsB = new canvasBlob(target);
-      document.body.appendChild(cvsB.renderImage());
       upload = new GpAPI([cvsB]);
       upload.setCallbacks({
         open: function() {
@@ -756,17 +757,68 @@
           return console.log('try to post');
         }
       });
-      postOption = {
-        comment: 'test',
-        mention: [],
-        disableComment: false,
-        lockPost: false,
-        circle: ['72cf18790d1b46b5'],
-        userID: message['user']['userID'],
-        sessionID: message['user']['sessionID']
+      postOption = {};
+      graphicalInterface = function() {
+        var bg, cancelButton, circleID, circleName, circleSlection, commentArea, crtEle, d, option, sendButton, sharebox, _ref;
+        d = document;
+        crtEle = 'createElement';
+        bg = d[crtEle]('div');
+        bg.id = 'GPic-Background';
+        bg.style.width = "" + document.width + "px";
+        bg.style.height = "" + document.height + "px";
+        bg.style.backgroundColor = "rgba(255,255,255,0.8)";
+        bg.style.position = "fixed";
+        bg.style.top = "0";
+        bg.style.zIndex = "999";
+        sharebox = d[crtEle]('div');
+        sharebox.id = 'GPic-Sharebox';
+        sharebox.style.position = 'fixed';
+        sharebox.style.top = '50%';
+        sharebox.style.left = '50%';
+        sharebox.style.margin = '-5em';
+        commentArea = d[crtEle]('textarea');
+        commentArea.placeholder = 'add comment';
+        circleSlection = d[crtEle]('select');
+        _ref = message['user']['circleInfo'];
+        for (circleName in _ref) {
+          circleID = _ref[circleName];
+          option = d[crtEle]('option');
+          option.appendChild(d['createTextNode'](circleName));
+          option.value = circleID;
+          circleSlection.add(option);
+        }
+        sendButton = d[crtEle]('button');
+        cancelButton = d[crtEle]('button');
+        sendButton.id = 'Gpic-send';
+        cancelButton.id = 'Gpic-cancel';
+        sendButton.appendChild(document.createTextNode('send'));
+        cancelButton.appendChild(document.createTextNode('cancel'));
+        sharebox.appendChild(commentArea);
+        sharebox.appendChild(circleSlection);
+        sharebox.appendChild(sendButton);
+        sharebox.appendChild(cancelButton);
+        bg.appendChild(sharebox);
+        document.body.appendChild(bg);
+        sendButton[addListener]('click', function() {
+          postOption = {
+            comment: commentArea.value,
+            mention: [],
+            disableComment: false,
+            lockPost: false,
+            circle: [circleSlection.options[circleSlection.selectedIndex].value],
+            userID: message['user']['userID'],
+            sessionID: message['user']['sessionID']
+          };
+          upload.init();
+          document.body.removeChild(bg);
+          return sendResponse();
+        });
+        return cancelButton[addListener]('click', function() {
+          document.body.removeChild(bg);
+          return sendResponse();
+        });
       };
-      upload.init();
-      sendResponse();
+      graphicalInterface();
       return true;
     }
   };

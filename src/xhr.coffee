@@ -10,8 +10,8 @@
 context = arguments[0] || window
 w = window
 
-addListener = if w.addEventListener? then  w.addEventListener else w.attachEvent
-rmvListener = if w.removeEventListener? then w.removeEventListener else w.detachEvent
+addListener = if w.addEventListener? then  'addEventListener' else 'attachEvent'
+rmvListener = if w.removeEventListener? then 'removeEventListener' else 'detachEvent'
 
 xhr_compatible = ->
     if w.XMLHttpRequest?

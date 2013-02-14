@@ -42,13 +42,15 @@ canvasBlob = (imgEle) ->
         console.log('TypeError: Need a image object')
         return false
     if !!canvasPrototype and (hasBlob() or !!BlobBuilder) and hasArrayBuffer()
-
-        width = imgEle.width
-        height = imgEle.height
+        copy = imgEle.cloneNode()
+        copy.removeAttribute('width')
+        copy.removeAttribute('height')
+        width = copy.width
+        height = copy.height
 
         @imageName = ->
             try
-                return /[^\/]+\.[^\/]+$/.exec(imgEle.src)[0]
+                return /[^\/]+\.[^\/]+$/.exec(copy.src)[0]
             catch e
                 console.log 'invalid name'
                 return 'error'
@@ -57,9 +59,9 @@ canvasBlob = (imgEle) ->
             try
                 canvas = document.createElement('canvas')
                 context = canvas.getContext('2d')
-                context.width = width
-                context.height = height
-                context.drawImage(imgEle, 0, 0)
+                canvas.width = width
+                canvas.height = height
+                context.drawImage(copy, 0, 0)
                 dataUrl = canvas.toDataURL()
                 #check if the dataUrl is encoded
                 if dataUrl.split(',')[0].indexOf('base64') != -1
@@ -71,7 +73,7 @@ canvasBlob = (imgEle) ->
                 byteString
                 ajax
                     method : "GET"
-                    url    : imgEle.src
+                    url    : copy.src
                     async  : false
                     before : (xhr) ->
                         xhr.overrideMimeType('text/plain; charset=x-user-defined')
@@ -88,7 +90,7 @@ canvasBlob = (imgEle) ->
             # w / width * H/h will be compared with alpha and beta.
             # alpha: it clips the img vertically, increasing with clipping threshold.
             # beta: it clips the img horizontally, decreasing with clipping threshold.
-            renderedImg = imgEle.cloneNode()
+            renderedImg = copy.cloneNode()
             clip = (img, w, h) -> img.style = "clip: rect(0px, #{w}px, #{h}px, 0px);"
 
             if targetH > height # handle the most frequent situation first

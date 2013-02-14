@@ -20,6 +20,7 @@ execScripts = (tab, scripts, callback, cbs) ->
 clickHandler = (info, tab) ->
     storedUsers = JSON.parse localStorage['GpicUsers']
     storedTabs = JSON.parse localStorage['GpicTabs']
+
     if storedUsers.length is 0
         user = new userInfo()
         user.init ->
@@ -42,13 +43,38 @@ clickHandler = (info, tab) ->
                         }
                     storedTabs.push tab.id
                     localStorage['GpicTabs'] = JSON.stringify storedTabs
+                else
+                    currentUser = storedUsers[0]
+                    chrome.tabs.sendMessage tab.id, {
+                        todo   : 'execute'
+                        target : info.srcUrl
+                        user   : currentUser
+                    }
     else
         currentUser = storedUsers[0]
-        chrome.tabs.sendMessage tab.id, {
-            todo   : 'execute'
-            target : info.srcUrl
-            user   : currentUser
-        }
+        unless tab.id in storedTabs
+            #scripts = ['extInterface.js', 'xhr.js', 'canvasBlob.js', 'gplus_api,js']
+            #callbas =
+            #    'extInterface.js' : -> #show layout here
+            #    ''
+            chrome.tabs.executeScript tab.id, {file : 'test.js'}, ->
+                # to do : exclude g+ it self
+                chrome.tabs.sendMessage tab.id, {
+                    status : 'injection success'
+                    todo   : 'execute'
+                    target : info.srcUrl
+                    user   : currentUser
+                }
+            storedTabs.push tab.id
+            localStorage['GpicTabs'] = JSON.stringify storedTabs
+        else
+            currentUser = storedUsers[0]
+            chrome.tabs.sendMessage tab.id, {
+                todo   : 'execute'
+                target : info.srcUrl
+                user   : currentUser
+            }
+
 
 chrome.contextMenus.onClicked.addListener clickHandler
 
