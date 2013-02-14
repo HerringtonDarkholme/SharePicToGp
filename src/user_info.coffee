@@ -27,14 +27,14 @@ init = ->
         url    : shareBoxURL
         async  : false
         onload : (resp) ->
-            #try
+            try
                 responseText = resp['responseText']
                 console.log resp.status
                 self.userID = (/plus\.google\.com\/(\d+)/.exec responseText)[1]
                 self.sessionID = (/AObGSA.*:\d+/.exec responseText)[0]
-            #catch e
-            #    console.log e
-            #    console.log 'Error! try signing in?'
+            catch e
+                console.log e
+                console.log 'Error! try signing in?'
 getCircle = ->
     self = @
     ajax
