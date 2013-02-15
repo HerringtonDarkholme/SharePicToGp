@@ -55,6 +55,9 @@ canvasBlob = (imgEle) ->
                 console.log 'invalid name'
                 return 'error'
 
+        @imageSrc = ->
+            return copy.src
+
         @getByteString = ->
             try
                 canvas = document.createElement('canvas')

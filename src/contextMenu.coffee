@@ -97,3 +97,4 @@ chrome.runtime.onInstalled.addListener ->
 
     localStorage['GpicUsers'] = JSON.stringify []
     localStorage['GpicTabs'] = JSON.stringify []
+    localStorage['GpicLastSelected'] = JSON.stringify []
