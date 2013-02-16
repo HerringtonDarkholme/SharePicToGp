@@ -210,17 +210,25 @@ postImage = (postOption)->
     spar[1] = "oz:#{userID}.#{new Date().getTime().toString(16)}.0"
     spar[3] = if @album? then @album['albumID'] else @customerInfo[0]['albumid']
     spar[9] = true
-    spar[10] = for m in postOption['mention'] then [null, m]
+    spar[10] = for m in postOption['mention']
+        if typeof m is "string" then [null, m] else continue
     spar[14] = spar[36] = []
     spar[11] = spar[16] = false
     spar[19] = userID
+    ### Hashtag on stream
+    spar[21] = []
+    spar[21][0] = 13
+    spar[21][2] = newNullArray 8
+    spar[21][7] = [ ["#Caturday"],1,["#Caturday"] ]
+    ###
     spar[27] = postOption['disableComment']
     spar[28] = postOption['lockPost']
+    #spar[33] = 's:GPic'
     spar[34] = newNullArray spar34Length
     spar[37] = [ [], null]
     for c in postOption['circle'] then spar[37][0].push [null, c]
     for m in postOption['mention'] then spar[37][0].push [null, null, m]
-    spar[44] = "!A0JoSBi6oOwwzERUO9imjc2DBAIAAAB-UgAAABwq1gEi"
+    spar[44] = "!A0JClOtociyxyURL0sHZ4kKAaQIAAABWUgAAABsqAQLHfm3dNwOj3oPKLDw_1pUOC9o1WJ-DNe4KSHEBA51hx5uttEkdwn_MrKq2-yes_oFCxe3FSgDGL9NfDYzNRtGa2glh4WsMZ1cig6rH8XOU0rY3ufvgwn2bkOZUDiVduu82y2GHWTHvES6_m7pmxancM0-CerpuFgPHgZVkoBxUvxUZaFSym8He1Xw4GSnuRdg6qAVycTX6wP4ggY1LZQV5IScr8cJA36IFTAULziZJbQXZSVX-UrRTa5z707BBY5sdvHRkQ2APb_ON33m9bnRq4FhuXMiJOx2hTxAaS7RLQdfQIcKkoMYG7mZZ7K_tD_fDwGP8NEB5EMrnVCGUsJHiOU0"
 
     if @album? and @album['albumName']?
         albumUrl = "https://plus.google.com/photos/" + userID + "/albums/" + @album['albumID']
@@ -239,7 +247,7 @@ postImage = (postOption)->
             image[47][1] = [null, buffer[2], "http://google.com/profiles/media/container", ""]
             image[47][2] = [null, "albumid=#{buffer[0]}&photoid=#{buffer[1]}", "http://google.com/profiles/media/onepick_media_id", ""]
 
-        spar[6] = JSON.stringify albumInfo.concat imgs
+        spar[6] = JSON.stringify (for i in albumInfo.concat imgs then JSON.stringify i)
         spar[16] = spar[32] = true
         spar[29] = false
         spar[34][0] = SPAR_34_MULTI
@@ -260,7 +268,7 @@ postImage = (postOption)->
             image[41][1] = image[41][0] # copy thumbnail
             buffer = image[47][1] #it is deep copy
             image[47][1] = [null, "albumid=#{buffer[0]}&photoid=#{buffer[1]}", "http://google.com/profiles/media/onepick_media_id", ""]
-        spar[6] = JSON.stringify imgs
+        spar[6] = JSON.stringify (for i in imgs then JSON.stringify i)
         #spar[12] = false
         spar[29] = true
         if imgs.length > 1
@@ -284,7 +292,7 @@ postImage = (postOption)->
     reqid = +new Date()% 10000000
     ajax
         method  : 'POST'
-        url     : "#{baseURL}/_/sharebox/post/?spam=#{spam}&rt=j&_reqid=#{reqid}"
+        url     : "#{baseURL}/_/sharebox/post/?spam=#{spam}&rt=j&_reqid=#{reqid}" + "&ozv=es_oz_20130214.08_p5&avw=str%3A1&fsid=67889976"
         headers :
             "Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"
         data    : 'f.req=' + (encodeURIComponent JSON.stringify spar )+ "&at=#{sessionID}" #HDmark

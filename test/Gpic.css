@@ -1,0 +1,223 @@
+#Gpic-background {
+    position :           fixed;
+    top :                0;
+    z-index :            999999999;
+    background-color :   rgba(255, 255, 255, 0.5);
+    color: white;
+    font: italic 100 1.4em  "Baskerville Old Face", "Hoefler Text", Garamond, "Times New Roman", serif;
+}
+
+
+#Gpic-sharebox {
+    position:       fixed;
+    top:            50%;
+    left:           50%;
+    width:          32em;
+    min-height:     16em;
+    max-height:     32em;
+    margin-left:    -14em;
+    margin-top:     -12em;
+    background-color: white;
+    box-shadow:  0px 0px 20px rgba(0,0,0,0.8);
+    -webkit-transition: all 0.218s ease-in-out;
+    transition: all 0.218s ease-in-out;
+}
+
+::-webkit-input-placeholder {
+   color: #AAA;
+}
+
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+}
+
+#Gpic-sharebox>header {
+    display: table;
+    margin-bottom: 1em;
+    width: 100%;
+}
+#Gpic-sharebox>header>div {
+    display: table-cell;
+    height: 2em;
+    width: 25%;
+}
+#Gpic-sharebox>header>div#red{
+    background: #f22c2b;
+}
+#Gpic-sharebox>header>div#blue{
+    background: #3b75ff;
+}
+#Gpic-sharebox>header>div#green{
+    background: #0bba36;
+}
+#Gpic-sharebox>header>div#yellow{
+    background: #ffc01c;
+}
+
+textarea#Gpic-comment-area {
+    font: italic 100 1.4em  "Baskerville Old Face", "Hoefler Text", Garamond, "Times New Roman", serif;
+    border: 0px;
+    width: 90%;
+    color:              #666;
+    padding:            8px 9px;
+    cursor:             text;
+    outline:            none;
+    background:   white;
+
+}
+
+#Gpic-circle-behavior {
+    min-height: 2em;
+    max-height: 20em;
+    margin: 1em 1em 0.5em 1em;
+    overflow: hidden;
+}
+
+#Gpic-circle-behavior:hover, textarea#Gpic-comment-area:hover {
+    box-shadow: rgba(0,0,0,0.2) 0 0 8px;
+}
+
+#Gpic-selected-circles {
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    border:             0px;
+    padding: 0px 2%;
+    vertical-align: middle;
+}
+
+#Gpic-selected-circles span {
+    display: inline-block;
+    vertical-align: middle;
+    padding: 0 1em;
+    line-height: 1.5em;
+    color: #666;
+}
+#Gpic-selected-circles #Gpic-add {
+    float: left;
+}
+
+
+#Gpic-selected-circles .Gpic-circle-option {
+    float: left;
+    height: 1.5em;
+    line-height: 1.5em;
+    padding-left: 1em;
+    outline: none;
+    vertical-align: middle;
+    cursor: default;
+}
+
+#Gpic-selected-circles .Gpic-circle-option>.Gpic-delete-circle {
+    float: right;
+    color: #f0f0f0;
+}
+
+#Gpic-selected-circles .Gpic-circle-option[data-default-circle] {
+   color: #00A300;
+}
+
+#Gpic-selected-circles .Gpic-circle-option[data-circle-id] {
+   color: #B91D47;
+}
+
+#Gpic-circles {
+    margin-top: 2em;
+    width: 100%;
+    display: none;
+    color: #666;
+}
+
+#Gpic-circles div {
+    display: inline-block;
+    width: 90%;
+    margin: 0;
+    padding-left: 1em;
+    text-align: left;
+    transition: all 0.218s ease-in-out;
+}
+
+#Gpic-circles div:hover {
+    background-color: rgba(0,0,0,0.4);
+    color: #fff;
+}
+
+#Gpic-circles.active {
+    display: block;
+    max-height: 12em;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#Gpic-sharebox #Gpic-send,#Gpic-cancel {
+    float: right;
+    cursor: default;
+    text-align: center;
+    white-space: nowrap;
+    margin: 1em 1em 0.5em 0em;
+    height: 1.4em;
+    line-height: 2em;
+    width: 4em;
+    outline: 0;
+    padding: 0 1em;
+    background: white;
+    font: italic 100 1em  "Baskerville Old Face", "Hoefler Text", Garamond, "Times New Roman", serif;
+
+}
+
+#Gpic-send:hover .shadow{
+-webkit-mask-box-image: -webkit-linear-gradient(left,transparent 0%,rgba(0,0,0,.8) 50%,transparent 100%);
+background-color: transparent;
+background-image: -webkit-linear-gradient(top,rgba(0,0,0,.2),transparent);
+background-image: linear-gradient(top,rgba(0,0,0,.2),transparent);
+border-top: 1px solid rgba(0,0,0,0.4);
+height: 5px;
+margin: -1px 0 -9px 0;
+
+}
+
+#Gpic-cancel:hover .shadow{
+-webkit-mask-box-image: -webkit-linear-gradient(left,transparent 0%,rgba(0,0,0,.8) 50%,transparent 100%);
+background-color: transparent;
+background-image: -webkit-linear-gradient(top,rgba(0,0,0,.2),transparent);
+background-image: linear-gradient(top,rgba(0,0,0,.2),transparent);
+border-top: 1px solid rgba(0,0,0,0.4);
+height: 8px;
+margin: -1px 0 -9px 0;
+
+}
+
+#Gpic-send {
+    color: #008287;
+    opacity: 0.1;
+}
+#Gpic-send.active {
+    opacity: 1;
+}
+#Gpic-sharebox #Gpic-cancel {
+    color: #333;
+}
+
+#Gpic-notice {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    margin-left: -2em;
+    z-index: 999999999;
+    background-color: #ffd700;
+    width: 5em;
+    height: 2em;
+    line-height: 1em;
+    color: black;
+    font: bold 1em;
+}

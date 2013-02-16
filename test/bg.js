@@ -343,9 +343,16 @@
 
 
   clickHandler = function(info, tab) {
-    var currentUser, storedTabs, storedUsers, user, _ref;
+    var currentUser, lastSelected, storedTabs, storedUsers, updateLastSelected, user, _ref;
     storedUsers = JSON.parse(localStorage['GpicUsers']);
     storedTabs = JSON.parse(localStorage['GpicTabs']);
+    lastSelected = JSON.parse(localStorage['GpicLastSelected']);
+    updateLastSelected = function(resp) {
+      if ((resp != null) && (resp['selectedCircles'] != null)) {
+        lastSelected[0] = resp['selectedCircles'];
+        return localStorage['GpicLastSelected'] = JSON.stringify(lastSelected);
+      }
+    };
     if (storedUsers.length === 0) {
       user = new userInfo();
       return user.init(function() {
@@ -355,14 +362,20 @@
           localStorage['GpicUsers'] = JSON.stringify(storedUsers);
           currentUser = storedUsers[0];
           if (_ref = tab.id, __indexOf.call(storedTabs, _ref) < 0) {
-            chrome.tabs.executeScript(tab.id, {
-              file: 'test.js'
+            chrome.tabs.insertCSS(tab.id, {
+              file: 'Gpic.css'
             }, function() {
-              return chrome.tabs.sendMessage(tab.id, {
-                status: 'injection success',
-                todo: 'execute',
-                target: info.srcUrl,
-                user: currentUser
+              console.log('insertedCSS!');
+              return chrome.tabs.executeScript(tab.id, {
+                file: 'test.js'
+              }, function() {
+                return chrome.tabs.sendMessage(tab.id, {
+                  status: 'injection success',
+                  todo: 'execute',
+                  target: info.srcUrl,
+                  user: currentUser,
+                  lastSelected: lastSelected[0]
+                }, updateLastSelected);
               });
             });
             storedTabs.push(tab.id);
@@ -372,26 +385,31 @@
             return chrome.tabs.sendMessage(tab.id, {
               todo: 'execute',
               target: info.srcUrl,
-              user: currentUser
-            });
+              user: currentUser,
+              lastSelected: lastSelected[0]
+            }, updateLastSelected);
           }
         });
       });
     } else {
       currentUser = storedUsers[0];
       if (_ref = tab.id, __indexOf.call(storedTabs, _ref) < 0) {
-        chrome.tabs.executeScript(tab.id, {
-          file: 'test.js'
+        return chrome.tabs.insertCSS(tab.id, {
+          file: 'Gpic.css'
         }, function() {
-          return chrome.tabs.sendMessage(tab.id, {
-            status: 'injection success',
-            todo: 'execute',
-            target: info.srcUrl,
-            user: currentUser
+          chrome.tabs.executeScript(tab.id, {
+            file: 'test.js'
+          }, function() {
+            return chrome.tabs.sendMessage(tab.id, {
+              status: 'injection success',
+              todo: 'execute',
+              target: info.srcUrl,
+              user: currentUser
+            });
           });
+          storedTabs.push(tab.id);
+          return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
         });
-        storedTabs.push(tab.id);
-        return localStorage['GpicTabs'] = JSON.stringify(storedTabs);
       } else {
         currentUser = storedUsers[0];
         return chrome.tabs.sendMessage(tab.id, {
@@ -427,7 +445,8 @@
       documentUrlPatterns: ["\u003Call_urls\u003E"]
     });
     localStorage['GpicUsers'] = JSON.stringify([]);
-    return localStorage['GpicTabs'] = JSON.stringify([]);
+    localStorage['GpicTabs'] = JSON.stringify([]);
+    return localStorage['GpicLastSelected'] = JSON.stringify([]);
   });
 
 }).call(this);
