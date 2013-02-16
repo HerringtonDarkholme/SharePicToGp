@@ -889,8 +889,9 @@
               var delay, notice;
               console.log('post success');
               notice = document.getElementById('Gpic-notice');
+              notice.innerText = 'Image Posted!';
               delay = setTimeout(function() {
-                notice.innerText = 'Image Posted!';
+                document.body.removeChild(notice);
                 return clearTimeout(delay);
               }, 2869);
               return sendResponse({

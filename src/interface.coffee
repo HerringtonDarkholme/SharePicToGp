@@ -137,8 +137,9 @@ messageHandler = (message, sender, sendResponse) ->
                     post : ->
                         console.log  'post success'
                         notice = document.getElementById 'Gpic-notice'
+                        notice.innerText = 'Image Posted!'
                         delay = setTimeout ->
-                            notice.innerText = 'Image Posted!'
+                            document.body.removeChild notice
                             clearTimeout delay
                         , 2869
                         sendResponse
