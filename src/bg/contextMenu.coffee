@@ -21,11 +21,21 @@ clickHandler = (info, tab) ->
     storedUsers = JSON.parse localStorage['GpicUsers']
     storedTabs = JSON.parse localStorage['GpicTabs']
     lastSelected = JSON.parse localStorage['GpicLastSelected']
+    currentUser = null
 
     updateLastSelected = (resp) ->
         if resp? and resp['selectedCircles']?
             lastSelected[0] = resp['selectedCircles']
             localStorage['GpicLastSelected'] = JSON.stringify lastSelected
+
+    sendExecute = ->
+        chrome.tabs.sendMessage tab.id, {
+            status : 'injection success'
+            todo   : 'execute'
+            target : info.srcUrl
+            user   : currentUser
+            lastSelected : lastSelected[0]
+        }, updateLastSelected
 
     if storedUsers.length is 0
         user = new userInfo()
@@ -41,26 +51,15 @@ clickHandler = (info, tab) ->
                     #    ''
                     chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
                         console.log 'insertedCSS!'
-                        chrome.tabs.executeScript tab.id, {file : 'test.js'}, ->
+                        chrome.tabs.executeScript tab.id, {file : 'test.js'}, sendExecute
                             # to do : exclude g+ it self
-                            chrome.tabs.sendMessage tab.id, {
-                                status : 'injection success'
-                                todo   : 'execute'
-                                target : info.srcUrl
-                                user   : currentUser
-                                lastSelected : lastSelected[0]
-                            }, updateLastSelected
+
 
                     storedTabs.push tab.id
                     localStorage['GpicTabs'] = JSON.stringify storedTabs
                 else
                     currentUser = storedUsers[0]
-                    chrome.tabs.sendMessage tab.id, {
-                        todo   : 'execute'
-                        target : info.srcUrl
-                        user   : currentUser
-                        lastSelected : lastSelected[0]
-                    }, updateLastSelected
+                    sendExecute()
 
     else
         currentUser = storedUsers[0]
@@ -70,23 +69,13 @@ clickHandler = (info, tab) ->
             #    'extInterface.js' : -> #show layout here
             #    ''
             chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
-                chrome.tabs.executeScript tab.id, {file : 'test.js'}, ->
+                chrome.tabs.executeScript tab.id, {file : 'test.js'}, sendExecute
                     # to do : exclude g+ it self
-                    chrome.tabs.sendMessage tab.id, {
-                        status : 'injection success'
-                        todo   : 'execute'
-                        target : info.srcUrl
-                        user   : currentUser
-                    }
                 storedTabs.push tab.id
                 localStorage['GpicTabs'] = JSON.stringify storedTabs
         else
             currentUser = storedUsers[0]
-            chrome.tabs.sendMessage tab.id, {
-                todo   : 'execute'
-                target : info.srcUrl
-                user   : currentUser
-            }
+            sendExecute()
 
 
 chrome.contextMenus.onClicked.addListener clickHandler

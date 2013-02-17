@@ -770,27 +770,27 @@
       circleSlection = bg.querySelector('#Gpic-circles');
       if (message['lastSelected'] != null) {
         _ref = message['lastSelected'];
-        for (circleName in _ref) {
-          circleID = _ref[circleName];
+        for (circleID in _ref) {
+          circleName = _ref[circleID];
           option = document.createElement('div');
           option.className = 'Gpic-circle-option';
           option.appendChild(document.createTextNode(circleName));
-          if (typeof circleID === "number") {
+          if (circleID === '1' || circleID === '3' || circleID === '4') {
             option.setAttribute('data-default-circle', circleID);
           } else {
             option.setAttribute('data-circle-id', circleID);
           }
-          selectedCircle.appendChild(option);
+          selectedCircle.insertBefore(option, selectedCircle.firstChild);
         }
       }
       document.body.insertBefore(bg, document.body.firstChild);
       defaultCircle = {
-        'public': 1,
-        'your circle': 3,
-        'extended circle': 4
+        1: 'Public',
+        3: 'Your Circle',
+        4: 'Extended Circle'
       };
-      for (circleName in defaultCircle) {
-        circleID = defaultCircle[circleName];
+      for (circleID in defaultCircle) {
+        circleName = defaultCircle[circleID];
         option = document.createElement('div');
         option.className = 'Gpic-circle-option';
         option.appendChild(document.createTextNode(circleName));
@@ -798,18 +798,20 @@
         circleSlection.appendChild(option);
       }
       _ref1 = message['user']['circleInfo'];
-      for (circleName in _ref1) {
-        circleID = _ref1[circleName];
-        option = document.createElement('div');
-        option.className = 'Gpic-circle-option';
-        option.appendChild(document.createTextNode(circleName));
-        option.setAttribute('data-circle-id', circleID);
-        circleSlection.appendChild(option);
+      for (circleID in _ref1) {
+        circleName = _ref1[circleID];
+        if (circleName !== 'Blocked') {
+          option = document.createElement('div');
+          option.className = 'Gpic-circle-option';
+          option.appendChild(document.createTextNode(circleName));
+          option.setAttribute('data-circle-id', circleID);
+          circleSlection.appendChild(option);
+        }
       }
       return bg.querySelector('#Gpic-sharebox');
     };
     userBehavior = function(context) {
-      var addCircleHandler, addSpan, cancelButton, circle, circleArea, circleSlection, cvsB, e, getSelectedCircleNum, hideCircleHandler, mention, postOption, resp, selectedCircles, sendButton, showCircleHandler, upload, _i, _j, _len, _len1, _ref, _results;
+      var addCircleHandler, addSpan, cancelButton, circle, circleArea, circleSlection, cvsB, e, eid, getSelectedCircleNum, hideCircleHandler, mention, postOption, removeCircleHandler, resp, selectedCircles, sendButton, showCircleHandler, upload, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results;
       selectedCircles = context.querySelector('#Gpic-selected-circles');
       circleSlection = context.querySelector('#Gpic-circles');
       circleArea = context.querySelector('#Gpic-circle-behavior');
@@ -859,15 +861,44 @@
         sendButton.className = 'active';
         return self[rmvListener]('click', addCircleHandler);
       };
+      removeCircleHandler = function(event) {
+        var couterpart, q;
+        event.stopPropagation();
+        if ((this.getAttribute('data-default-circle')) != null) {
+          q = "data-default-circle=\"" + (this.getAttribute('data-default-circle')) + "\"";
+        } else if ((this.getAttribute('data-circle-id')) != null) {
+          q = "data-circle-id=\"" + (this.getAttribute('data-circle-id')) + "\"";
+        }
+        console.log(q);
+        couterpart = circleSlection.querySelector("[" + q + "]");
+        console.log(couterpart);
+        couterpart[addListener]('click', addCircleHandler);
+        selectedCircles.removeChild(this);
+        if (!(getSelectedCircleNum() > 0)) {
+          return sendButton.className = '';
+        }
+      };
       circleArea[addListener]('click', showCircleHandler);
       _ref = context.querySelectorAll('#Gpic-circles .Gpic-circle-option');
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         e = _ref[_i];
-        e[addListener]('click', addCircleHandler);
+        if (message['lastSelected'] != null) {
+          eid = (e.getAttribute('data-circle-id')) || (e.getAttribute('data-default-circle'));
+          if (!(eid in message['lastSelected'])) {
+            e[addListener]('click', addCircleHandler);
+          }
+        } else {
+          e[addListener]('click', addCircleHandler);
+        }
+      }
+      _ref1 = selectedCircles.querySelectorAll('.Gpic-circle-option');
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        e = _ref1[_j];
+        e[addListener]('click', removeCircleHandler);
       }
       _results = [];
-      for (_j = 0, _len1 = imgList.length; _j < _len1; _j++) {
-        cvsB = imgList[_j];
+      for (_k = 0, _len2 = imgList.length; _k < _len2; _k++) {
+        cvsB = imgList[_k];
         if (cvsB.imageSrc() === message['target']) {
           postOption = {};
           mention = [];
@@ -900,18 +931,18 @@
             }
           });
           sendButton[addListener]('click', function() {
-            var commentArea, notice, option, _k, _len2, _ref1;
+            var commentArea, notice, option, _l, _len3, _ref2;
             if (sendButton.className === 'active') {
               commentArea = context.querySelector('#Gpic-comment-area');
-              _ref1 = selectedCircles.querySelectorAll('div');
-              for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-                option = _ref1[_k];
+              _ref2 = selectedCircles.querySelectorAll('div');
+              for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
+                option = _ref2[_l];
                 if ((option.getAttribute('data-default-circle')) != null) {
                   mention.push(parseInt(option.getAttribute('data-default-circle')));
-                  resp[option.innerText] = parseInt(option.getAttribute('data-default-circle'));
+                  resp[option.getAttribute('data-default-circle')] = option.innerText;
                 } else if ((option.getAttribute('data-circle-id')) != null) {
                   circle.push(option.getAttribute('data-circle-id'));
-                  resp[option.innerText] = option.getAttribute('data-circle-id');
+                  resp[option.getAttribute('data-circle-id')] = option.innerText;
                 }
               }
               postOption = {
