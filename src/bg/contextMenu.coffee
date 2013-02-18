@@ -1,22 +1,19 @@
 ###
-execScripts = (tab, scripts, callback, cbs) ->
-    try
-        if cbs?
-            for scr in scripts[...]
-                if cbs[scr]?
-                    chrome.tabs.execScripts tab, {file : scr}, cbs[scr]
-                else
-                    chrome.tabs.execScripts tab, {file : scr}
-        else
-            for scr in scripts[...]
-                chrome.tabs.execScripts tab, {file : scr}
-        if callback? then chrome.tabs.execScripts tab, {file : scripts[scripts.length-1]}, callback
-        else then p
-        return true
-    catch e
-        console.log 'execScripts error'
-        return false
+experimental : add more functionality to background
+other scripts should push
+
+callList = [ caller...]
+
+caller =
+    condition : Boolean function (info, tab)
+    insert : {css : filename, js: filename}
+    send : function
+
 ###
+context = arguments[0] || window
+
+context.callers = []
+
 clickHandler = (info, tab) ->
     storedUsers = JSON.parse localStorage['GpicUsers']
     storedTabs = JSON.parse localStorage['GpicTabs']
@@ -35,7 +32,32 @@ clickHandler = (info, tab) ->
             target : info.srcUrl
             user   : currentUser
             lastSelected : lastSelected[0]
-        }, updateLastSelected
+        }, ->
+            updateLastSelected()
+            for caller in callers
+                if caller['condition']? and caller['condition']()
+                    caller['send']() if caller['send']?
+
+    insertFile = ->
+        insertExternal = ->
+            for caller in callers
+                if caller['condition']? and caller['condition']()
+                    if caller['file']?
+                        file = caller['file']
+                        if file['css']?
+                            chrome.tabs.insertCSS tab.id, {file : file['css']}, ->
+                                chrome.tabs.executeScript tab.id, {file: file['js']}, sendExecute if file['js']?
+                        else
+                            chrome.tabs.executeScript tab.id, {file: file['js']}, sendExecute if file['js']?
+
+        chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
+            console.log 'insertedCSS!'
+            chrome.tabs.executeScript tab.id, {file : 'test.js'},  insertExternal
+                # to do : exclude g+ it self
+        storedTabs.push tab.id
+        localStorage['GpicTabs'] = JSON.stringify storedTabs
+
+
 
     if storedUsers.length is 0
         user = new userInfo()
@@ -45,18 +67,7 @@ clickHandler = (info, tab) ->
                 localStorage['GpicUsers'] = JSON.stringify storedUsers
                 currentUser = storedUsers[0] # to do : multi user
                 unless tab.id in storedTabs
-                    #scripts = ['extInterface.js', 'xhr.js', 'canvasBlob.js', 'gplus_api,js']
-                    #callbas =
-                    #    'extInterface.js' : -> #show layout here
-                    #    ''
-                    chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
-                        console.log 'insertedCSS!'
-                        chrome.tabs.executeScript tab.id, {file : 'test.js'}, sendExecute
-                            # to do : exclude g+ it self
-
-
-                    storedTabs.push tab.id
-                    localStorage['GpicTabs'] = JSON.stringify storedTabs
+                    insertFile()
                 else
                     currentUser = storedUsers[0]
                     sendExecute()
@@ -64,15 +75,7 @@ clickHandler = (info, tab) ->
     else
         currentUser = storedUsers[0]
         unless tab.id in storedTabs
-            #scripts = ['extInterface.js', 'xhr.js', 'canvasBlob.js', 'gplus_api,js']
-            #callbas =
-            #    'extInterface.js' : -> #show layout here
-            #    ''
-            chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
-                chrome.tabs.executeScript tab.id, {file : 'test.js'}, sendExecute
-                    # to do : exclude g+ it self
-                storedTabs.push tab.id
-                localStorage['GpicTabs'] = JSON.stringify storedTabs
+            insertFile()
         else
             currentUser = storedUsers[0]
             sendExecute()

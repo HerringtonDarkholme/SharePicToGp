@@ -68,6 +68,7 @@ textarea#Gpic-comment-area {
     font: italic 100 1.4em  "Baskerville Old Face", "Hoefler Text", Garamond, "Times New Roman", serif;
     border: 0px;
     width: 90%;
+    margin: 0 15px;
     color:              #666;
     padding:            8px 9px;
     cursor:             text;

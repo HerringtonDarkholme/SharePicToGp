@@ -206,8 +206,7 @@ messageHandler = (message, sender, sendResponse) ->
         try
             filename = "'#{filename[0]}'"
         catch e
-            console.log "cannot find proper name!"
-            return true
+            filename = "'#{targetUrl}'"
 
         candidates = document.querySelectorAll("img[src$=#{filename}]") #css3 selector
         for cand in candidates

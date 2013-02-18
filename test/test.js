@@ -183,8 +183,7 @@
         try {
           return /[^\/]+\.[^\/]+$/.exec(copy.src)[0];
         } catch (e) {
-          console.log('invalid name');
-          return 'error';
+          return 'image.jpg';
         }
       };
       this.imageSrc = function() {
@@ -980,8 +979,7 @@
       try {
         filename = "'" + filename[0] + "'";
       } catch (e) {
-        console.log("cannot find proper name!");
-        return true;
+        filename = "'" + targetUrl + "'";
       }
       candidates = document.querySelectorAll("img[src$=" + filename + "]");
       for (_i = 0, _len = candidates.length; _i < _len; _i++) {

@@ -52,8 +52,7 @@ canvasBlob = (imgEle) ->
             try
                 return /[^\/]+\.[^\/]+$/.exec(copy.src)[0]
             catch e
-                console.log 'invalid name'
-                return 'error'
+                return 'image.jpg'
 
         @imageSrc = ->
             return copy.src
