@@ -36,19 +36,26 @@ clickHandler = (info, tab) ->
             updateLastSelected()
             for caller in callers
                 if caller['condition']? and caller['condition']()
-                    caller['send']() if caller['send']?
+                    caller['send'](tab, info) if caller['send']?
 
     insertFile = ->
+        inserted = 0
+        toInsert = callers.length
+
         insertExternal = ->
             for caller in callers
-                if caller['condition']? and caller['condition']()
-                    if caller['file']?
-                        file = caller['file']
-                        if file['css']?
-                            chrome.tabs.insertCSS tab.id, {file : file['css']}, ->
-                                chrome.tabs.executeScript tab.id, {file: file['js']}, sendExecute if file['js']?
-                        else
-                            chrome.tabs.executeScript tab.id, {file: file['js']}, sendExecute if file['js']?
+                if caller['condition']()
+                    file = caller['file']
+                    if file['css']?
+                        chrome.tabs.insertCSS tab.id, {file : file['css']}, ->
+                            chrome.tabs.executeScript tab.id, {file: file['js']}, ->
+                                inserted++
+                    else
+                        chrome.tabs.executeScript tab.id, {file: file['js']}, ->
+                            inserted++
+            while inserted < toInsert
+                true
+            sendExecute()
 
         chrome.tabs.insertCSS tab.id, {file : 'Gpic.css'}, ->
             console.log 'insertedCSS!'
@@ -56,7 +63,6 @@ clickHandler = (info, tab) ->
                 # to do : exclude g+ it self
         storedTabs.push tab.id
         localStorage['GpicTabs'] = JSON.stringify storedTabs
-
 
 
     if storedUsers.length is 0
